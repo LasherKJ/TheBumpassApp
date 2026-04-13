@@ -1,13 +1,19 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
+  Animated,
+  Easing,
 } from 'react-native';
-import { SafeAreaView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Location from 'expo-location';
 import { theme } from '../theme';
+import { CalcDistanceMeters, CalcInitialBearingDegrees } from '../utilities/haversine';
 import type { Destination } from '../types';
+
+const METERS_TO_MILES = 0.000621371;
 
 interface CompassScreenProps {
   destination: Destination | null;
@@ -15,6 +21,71 @@ interface CompassScreenProps {
 }
 
 export function CompassScreen({ destination, onBack }: CompassScreenProps) {
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [heading, setHeading] = useState(0);
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const prevRotation = useRef(0);
+
+  // Watch user position
+  useEffect(() => {
+    let sub: Location.LocationSubscription | null = null;
+    (async () => {
+      sub = await Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.High, distanceInterval: 1 },
+        (loc) => setUserLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude }),
+      );
+    })();
+    return () => { sub?.remove(); };
+  }, []);
+
+  // Watch device heading
+  useEffect(() => {
+    let sub: Location.LocationSubscription | null = null;
+    (async () => {
+      sub = await Location.watchHeadingAsync((h) => setHeading(h.trueHeading));
+    })();
+    return () => { sub?.remove(); };
+  }, []);
+
+  // Compute bearing and distance
+  const distance = destination && userLocation
+    ? CalcDistanceMeters(userLocation.latitude, userLocation.longitude, destination.latitude, destination.longitude)
+    : null;
+  const bearing = destination && userLocation
+    ? CalcInitialBearingDegrees(userLocation.latitude, userLocation.longitude, destination.latitude, destination.longitude)
+    : null;
+
+  // Animate compass rotation (bearing - device heading)
+  useEffect(() => {
+    const targetRotation = bearing !== null ? bearing - heading : 0;
+    // Shortest-path rotation to avoid spinning the long way around
+    let delta = targetRotation - prevRotation.current;
+    if (delta > 180) delta -= 360;
+    if (delta < -180) delta += 360;
+    const newRotation = prevRotation.current + delta;
+    prevRotation.current = newRotation;
+
+    Animated.timing(rotateAnim, {
+      toValue: newRotation,
+      duration: 200,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+  }, [bearing, heading, rotateAnim]);
+
+  const spin = rotateAnim.interpolate({
+    inputRange: [-360, 360],
+    outputRange: ['-360deg', '360deg'],
+  });
+
+  const distanceDisplay = distance !== null
+    ? `${(distance * METERS_TO_MILES).toFixed(1)} mi`
+    : '-- mi';
+
+  const bearingDisplay = bearing !== null
+    ? `${Math.round(bearing)}°`
+    : '--°';
+
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
@@ -22,7 +93,7 @@ export function CompassScreen({ destination, onBack }: CompassScreenProps) {
           <Text style={styles.backText}>▲ CHANGE DESTINATION</Text>
         </TouchableOpacity>
 
-        <Text style={styles.receiptDashes}>- - - - - - - - - - - - - - -</Text>
+        <View style={styles.receiptDashes} />
 
         {destination ? (
           <>
@@ -33,22 +104,27 @@ export function CompassScreen({ destination, onBack }: CompassScreenProps) {
           <Text style={styles.destLabel}>NO DESTINATION</Text>
         )}
 
-        <Text style={styles.receiptDashes}>- - - - - - - - - - - - - - -</Text>
+        <View style={styles.receiptDashes} />
 
-        {/* Compass placeholder */}
+        {/* Bearing readout */}
+        <Text style={styles.bearingText}>BRG {bearingDisplay}</Text>
+
+        {/* Compass */}
         <View style={styles.compassContainer}>
           <View style={styles.compassRing}>
-            <Text style={styles.compassArrow}>↑</Text>
+            <Animated.Text style={[styles.compassArrow, { transform: [{ rotate: spin }] }]}>
+              ↑
+            </Animated.Text>
           </View>
         </View>
 
         {/* Distance display */}
         <View style={styles.distanceSection}>
-          <Text style={styles.distanceValue}>-- mi</Text>
+          <Text style={styles.distanceValue}>{distanceDisplay}</Text>
           <Text style={styles.distanceLabel}>DISTANCE</Text>
         </View>
 
-        <Text style={styles.receiptDashes}>- - - - - - - - - - - - - - -</Text>
+        <View style={styles.receiptDashes} />
         <Text style={styles.footer}>BUMPASS</Text>
       </View>
     </SafeAreaView>
@@ -79,10 +155,10 @@ const styles = StyleSheet.create({
     letterSpacing: 3,
   },
   receiptDashes: {
-    fontFamily: theme.fonts.mono,
-    color: theme.colors.textSecondary,
-    fontSize: 14,
-    letterSpacing: 4,
+    width: '100%',
+    borderTopWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: theme.colors.textSecondary,
     marginVertical: 8,
   },
   destLabel: {
@@ -101,6 +177,14 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 8,
     textAlign: 'center',
+  },
+  bearingText: {
+    fontFamily: theme.fonts.mono,
+    fontSize: 13,
+    color: theme.colors.accent,
+    letterSpacing: 4,
+    textAlign: 'center',
+    marginVertical: 4,
   },
   compassContainer: {
     marginVertical: 40,

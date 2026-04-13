@@ -31,10 +31,10 @@ export function DestinationInputScreen({ onSubmit }: DestinationInputScreenProps
     >
       <View style={styles.container}>
         {/* Receipt-style header */}
-        <Text style={styles.receiptDashes}>- - - - - - - - - - - - - - -</Text>
+        <View style={styles.receiptDashes} />
         <Text style={styles.title}>BUMPASS</Text>
         <Text style={styles.subtitle}>WHERE ARE YOU HEADED?</Text>
-        <Text style={styles.receiptDashes}>- - - - - - - - - - - - - - -</Text>
+        <View style={styles.receiptDashes} />
 
         <View style={styles.inputSection}>
           <Text style={styles.label}>ENTER DESTINATION</Text>
@@ -79,10 +79,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   receiptDashes: {
-    fontFamily: theme.fonts.mono,
-    color: theme.colors.textSecondary,
-    fontSize: 14,
-    letterSpacing: 4,
+    width: '100%',
+    borderTopWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: theme.colors.textSecondary,
     marginVertical: 8,
   },
   title: {
