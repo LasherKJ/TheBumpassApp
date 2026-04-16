@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
+  Animated,
   View,
   Text,
   TouchableOpacity,
@@ -17,6 +18,27 @@ interface DestinationSelectScreenProps {
   userLocation: { latitude: number; longitude: number } | null;
   onSelect: (destination: Destination) => void;
   onBack: () => void;
+}
+
+function BobbingMarker() {
+  const translateY = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(translateY, { toValue: -6, duration: 800, useNativeDriver: true }),
+        Animated.timing(translateY, { toValue: 0, duration: 800, useNativeDriver: true }),
+      ]),
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [translateY]);
+
+  return (
+    <Animated.Text style={[styles.markerText, { transform: [{ translateY }] }]}>
+      ▾
+    </Animated.Text>
+  );
 }
 
 export function DestinationSelectScreen({
@@ -96,7 +118,7 @@ export function DestinationSelectScreen({
                   description={item.address}
                   onCalloutPress={() => onSelect(item)}
                 >
-                  <Text style={{ fontSize: 64, color: theme.colors.primary, fontWeight: '700', borderWidth: 1, borderColor: 'blue', height: 64 }}>▾</Text>
+                  <BobbingMarker />
                 </Marker>
               ))}
             </MapView>
@@ -194,6 +216,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginTop: 16,
   },
+
   resultItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -272,6 +295,12 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+  markerText: {
+    fontSize: 64,
+    color: theme.colors.primary,
+    fontWeight: '700',
+    height: 64,
   },
 });
 

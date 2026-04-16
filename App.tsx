@@ -10,6 +10,7 @@ import { DestinationSelectScreen } from './src/screens/DestinationSelectScreen';
 import { CompassScreen } from './src/screens/CompassScreen';
 import { theme } from './src/theme';
 import type { Destination } from './src/types';
+import { getRecentDestinations, addRecentDestination } from './src/utilities/recentDestinations';
 
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
 const MAX_RESULTS = 5;
@@ -53,6 +54,7 @@ export default function App() {
   const [results, setResults] = useState<Destination[]>([]);
   const [selectedDestination, setSelectedDestination] = useState<Destination | null>(null);
   const [userLocation, setUserLocation] = useState<Location.LocationObjectCoords | null>(null);
+  const [recentDestinations, setRecentDestinations] = useState<Destination[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -63,6 +65,10 @@ export default function App() {
       const loc = await Location.getCurrentPositionAsync({});
       setUserLocation(loc.coords);
     })();
+  }, []);
+
+  useEffect(() => {
+    getRecentDestinations().then(setRecentDestinations);
   }, []);
 
   const handleAddressSubmit = useCallback(async (address: string) => {
@@ -79,6 +85,7 @@ export default function App() {
 
   const handleDestinationSelect = useCallback((destination: Destination) => {
     setSelectedDestination(destination);
+    addRecentDestination(destination).then(setRecentDestinations);
     pagerRef.current?.scrollToPage(2);
   }, []);
 
@@ -95,7 +102,11 @@ export default function App() {
     <View style={styles.container}>
       <StatusBar style="light" />
       <VerticalPager ref={pagerRef}>
-        <DestinationInputScreen onSubmit={handleAddressSubmit} />
+        <DestinationInputScreen
+          onSubmit={handleAddressSubmit}
+          recentDestinations={recentDestinations}
+          onSelectRecent={handleDestinationSelect}
+        />
         <DestinationSelectScreen
           searchQuery={searchQuery}
           results={results}

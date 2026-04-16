@@ -7,14 +7,18 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { theme } from '../theme';
+import type { Destination } from '../types';
 
 interface DestinationInputScreenProps {
   onSubmit: (address: string) => void;
+  recentDestinations?: Destination[];
+  onSelectRecent?: (destination: Destination) => void;
 }
 
-export function DestinationInputScreen({ onSubmit }: DestinationInputScreenProps) {
+export function DestinationInputScreen({ onSubmit, recentDestinations = [], onSelectRecent }: DestinationInputScreenProps) {
   const [address, setAddress] = useState('');
 
   const handleGo = () => {
@@ -58,6 +62,34 @@ export function DestinationInputScreen({ onSubmit }: DestinationInputScreenProps
         >
           <Text style={styles.goButtonText}>▼ FIND IT ▼</Text>
         </TouchableOpacity>
+
+        {recentDestinations.length > 0 && (
+          <View style={styles.recentSection}>
+            <View style={styles.receiptDashes} />
+            <Text style={styles.recentHeading}>RECENT</Text>
+            <ScrollView style={styles.recentList} showsVerticalScrollIndicator={false}>
+              {recentDestinations.map((item, index) => (
+                <React.Fragment key={item.id}>
+                  {index > 0 && (
+                    <Text style={styles.separator}>· · · · · · · · · · · · · ·</Text>
+                  )}
+                  <TouchableOpacity
+                    style={styles.recentItem}
+                    onPress={() => onSelectRecent?.(item)}
+                    activeOpacity={0.6}
+                  >
+                    <Text style={styles.recentIndex}>{String(index + 1).padStart(2, '0')}</Text>
+                    <View style={styles.recentContent}>
+                      <Text style={styles.recentLabel}>{item.label}</Text>
+                      <Text style={styles.recentAddress}>{item.address}</Text>
+                    </View>
+                    <Text style={styles.recentArrow}>▼</Text>
+                  </TouchableOpacity>
+                </React.Fragment>
+              ))}
+            </ScrollView>
+          </View>
+        )}
 
         <View style={styles.scrollHint}>
           <Text style={styles.scrollHintText}>▽</Text>
@@ -146,6 +178,61 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.mono,
     fontSize: 24,
     color: theme.colors.textSecondary,
+    opacity: 0.4,
+  },
+  recentSection: {
+    width: '100%',
+    marginTop: 32,
+  },
+  recentHeading: {
+    fontFamily: theme.fonts.mono,
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.colors.textSecondary,
+    letterSpacing: 4,
+    marginBottom: 4,
+  },
+  recentList: {
+    maxHeight: 200,
+  },
+  recentItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  recentIndex: {
+    fontFamily: theme.fonts.mono,
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    marginRight: 16,
+  },
+  recentContent: {
+    flex: 1,
+  },
+  recentLabel: {
+    fontFamily: theme.fonts.mono,
+    fontSize: 15,
+    color: theme.colors.text,
+    fontWeight: '600',
+  },
+  recentAddress: {
+    fontFamily: theme.fonts.mono,
+    fontSize: 11,
+    color: theme.colors.textSecondary,
+    marginTop: 4,
+  },
+  recentArrow: {
+    fontFamily: theme.fonts.mono,
+    fontSize: 14,
+    color: theme.colors.accent,
+    marginLeft: 12,
+  },
+  separator: {
+    fontFamily: theme.fonts.mono,
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    textAlign: 'center',
+    letterSpacing: 2,
     opacity: 0.4,
   },
 });
