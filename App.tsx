@@ -105,6 +105,7 @@ export default function App() {
         />
         <CompassScreen
           destination={selectedDestination}
+          userLocation={userLocation ? { latitude: userLocation.latitude, longitude: userLocation.longitude } : null}
           onBack={handleBackToSelect}
         />
       </VerticalPager>

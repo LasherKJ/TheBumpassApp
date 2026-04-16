@@ -17,14 +17,22 @@ const METERS_TO_MILES = 0.000621371;
 
 interface CompassScreenProps {
   destination: Destination | null;
+  userLocation: { latitude: number; longitude: number } | null;
   onBack: () => void;
 }
 
-export function CompassScreen({ destination, onBack }: CompassScreenProps) {
-  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+export function CompassScreen({ destination, userLocation: initialLocation, onBack }: CompassScreenProps) {
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(initialLocation);
   const [heading, setHeading] = useState(0);
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const prevRotation = useRef(0);
+
+  // Sync initial location from parent if local watch hasn't fired yet
+  useEffect(() => {
+    if (initialLocation && !userLocation) {
+      setUserLocation(initialLocation);
+    }
+  }, [initialLocation]);
 
   // Watch user position
   useEffect(() => {
@@ -42,7 +50,10 @@ export function CompassScreen({ destination, onBack }: CompassScreenProps) {
   useEffect(() => {
     let sub: Location.LocationSubscription | null = null;
     (async () => {
-      sub = await Location.watchHeadingAsync((h) => setHeading(h.trueHeading));
+      sub = await Location.watchHeadingAsync((h) => {
+        // trueHeading requires GPS fix; fall back to magnetometer heading
+        setHeading(h.trueHeading >= 0 ? h.trueHeading : h.magHeading);
+      });
     })();
     return () => { sub?.remove(); };
   }, []);

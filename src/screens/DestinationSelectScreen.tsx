@@ -96,7 +96,7 @@ export function DestinationSelectScreen({
                   description={item.address}
                   onCalloutPress={() => onSelect(item)}
                 >
-                  <Text style={{ fontSize: 64, color: theme.colors.primary, fontWeight: '700' }}>▾</Text>
+                  <Text style={{ fontSize: 64, color: theme.colors.primary, fontWeight: '700', borderWidth: 1, borderColor: 'blue', height: 64 }}>▾</Text>
                 </Marker>
               ))}
             </MapView>
