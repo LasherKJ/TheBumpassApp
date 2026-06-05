@@ -51,6 +51,7 @@ export function DestinationInputScreen({ onSubmit, recentDestinations = [], onSe
             returnKeyType="go"
             onSubmitEditing={handleGo}
             autoCorrect={false}
+            keyboardAppearance="dark"
           />
         </View>
 

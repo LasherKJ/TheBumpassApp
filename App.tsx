@@ -55,6 +55,7 @@ export default function App() {
   const [selectedDestination, setSelectedDestination] = useState<Destination | null>(null);
   const [userLocation, setUserLocation] = useState<Location.LocationObjectCoords | null>(null);
   const [recentDestinations, setRecentDestinations] = useState<Destination[]>([]);
+  const [selectedFromRecent, setSelectedFromRecent] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -84,6 +85,14 @@ export default function App() {
   }, [userLocation]);
 
   const handleDestinationSelect = useCallback((destination: Destination) => {
+    setSelectedFromRecent(false);
+    setSelectedDestination(destination);
+    addRecentDestination(destination).then(setRecentDestinations);
+    pagerRef.current?.scrollToPage(2);
+  }, []);
+
+  const handleRecentSelect = useCallback((destination: Destination) => {
+    setSelectedFromRecent(true);
     setSelectedDestination(destination);
     addRecentDestination(destination).then(setRecentDestinations);
     pagerRef.current?.scrollToPage(2);
@@ -93,9 +102,9 @@ export default function App() {
     pagerRef.current?.scrollToPage(0);
   }, []);
 
-  const handleBackToSelect = useCallback(() => {
-    pagerRef.current?.scrollToPage(1);
-  }, []);
+  const handleBackFromCompass = useCallback(() => {
+    pagerRef.current?.scrollToPage(selectedFromRecent ? 0 : 1);
+  }, [selectedFromRecent]);
 
   return (
     <SafeAreaProvider>
@@ -105,7 +114,7 @@ export default function App() {
         <DestinationInputScreen
           onSubmit={handleAddressSubmit}
           recentDestinations={recentDestinations}
-          onSelectRecent={handleDestinationSelect}
+          onSelectRecent={handleRecentSelect}
         />
         <DestinationSelectScreen
           searchQuery={searchQuery}
@@ -117,7 +126,7 @@ export default function App() {
         <CompassScreen
           destination={selectedDestination}
           userLocation={userLocation ? { latitude: userLocation.latitude, longitude: userLocation.longitude } : null}
-          onBack={handleBackToSelect}
+          onBack={handleBackFromCompass}
         />
       </VerticalPager>
     </View>

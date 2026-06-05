@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
+import { useKeepAwake } from 'expo-keep-awake';
 import { theme } from '../theme';
 import { CalcDistanceMeters, CalcInitialBearingDegrees } from '../utilities/haversine';
 import type { Destination } from '../types';
@@ -22,6 +23,7 @@ interface CompassScreenProps {
 }
 
 export function CompassScreen({ destination, userLocation: initialLocation, onBack }: CompassScreenProps) {
+  useKeepAwake();
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(initialLocation);
   const [heading, setHeading] = useState(0);
   const rotateAnim = useRef(new Animated.Value(0)).current;
@@ -203,9 +205,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   compassRing: {
-    width: 180,
-    height: 180,
-    borderRadius: 90,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
     borderWidth: 1,
     borderColor: theme.colors.accent,
     alignItems: 'center',
@@ -213,7 +215,7 @@ const styles = StyleSheet.create({
   },
   compassArrow: {
     fontFamily: theme.fonts.mono,
-    fontSize: 64,
+    fontSize: 180,
     color: theme.colors.accent,
   },
   distanceSection: {
