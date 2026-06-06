@@ -87,8 +87,8 @@ export function CompassScreen({ destination, userLocation: initialLocation, onBa
   }, [bearing, heading, rotateAnim]);
 
   const spin = rotateAnim.interpolate({
-    inputRange: [-360, 360],
-    outputRange: ['-360deg', '360deg'],
+    inputRange: [-36000, 36000],
+    outputRange: ['-36000deg', '36000deg'],
   });
 
   const distanceDisplay = distance !== null
