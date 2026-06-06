@@ -39,25 +39,33 @@ export function CompassScreen({ destination, userLocation: initialLocation, onBa
   // Watch user position
   useEffect(() => {
     let sub: Location.LocationSubscription | null = null;
+    let cancelled = false;
     (async () => {
       sub = await Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.High, distanceInterval: 1 },
+        { accuracy: Location.Accuracy.BestForNavigation, distanceInterval: 1, timeInterval: 1000 },
         (loc) => setUserLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude }),
       );
+      if (cancelled) sub.remove();
     })();
-    return () => { sub?.remove(); };
+    return () => { cancelled = true; sub?.remove(); };
   }, []);
 
   // Watch device heading
   useEffect(() => {
     let sub: Location.LocationSubscription | null = null;
+    let cancelled = false;
     (async () => {
-      sub = await Location.watchHeadingAsync((h) => {
-        // trueHeading requires GPS fix; fall back to magnetometer heading
-        setHeading(h.trueHeading >= 0 ? h.trueHeading : h.magHeading);
-      });
+      try {
+        sub = await Location.watchHeadingAsync((h) => {
+          // trueHeading requires GPS fix; fall back to magnetometer heading
+          setHeading(h.trueHeading >= 0 ? h.trueHeading : h.magHeading);
+        });
+        if (cancelled) sub.remove();
+      } catch (e) {
+        console.warn('watchHeadingAsync failed:', e);
+      }
     })();
-    return () => { sub?.remove(); };
+    return () => { cancelled = true; sub?.remove(); };
   }, []);
 
   // Compute bearing and distance
