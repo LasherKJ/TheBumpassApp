@@ -51,6 +51,7 @@ async function searchPlaces(
 export default function App() {
   const pagerRef = useRef<VerticalPagerRef>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [browseMode, setBrowseMode] = useState(false);
   const [results, setResults] = useState<Destination[]>([]);
   const [selectedDestination, setSelectedDestination] = useState<Destination | null>(null);
   const [userLocation, setUserLocation] = useState<Location.LocationObjectCoords | null>(null);
@@ -73,6 +74,7 @@ export default function App() {
   }, []);
 
   const handleAddressSubmit = useCallback(async (address: string) => {
+    setBrowseMode(false);
     setSearchQuery(address);
     try {
       const found = await searchPlaces(address, userLocation);
@@ -84,7 +86,15 @@ export default function App() {
     pagerRef.current?.scrollToPage(1);
   }, [userLocation]);
 
+  const handleBrowseMap = useCallback(() => {
+    setBrowseMode(true);
+    setSearchQuery('');
+    setResults([]);
+    pagerRef.current?.scrollToPage(1);
+  }, []);
+
   const handleDestinationSelect = useCallback((destination: Destination) => {
+    setBrowseMode(false);
     setSelectedFromRecent(false);
     setSelectedDestination(destination);
     addRecentDestination(destination).then(setRecentDestinations);
@@ -113,11 +123,13 @@ export default function App() {
       <VerticalPager ref={pagerRef}>
         <DestinationInputScreen
           onSubmit={handleAddressSubmit}
+          onBrowseMap={handleBrowseMap}
           recentDestinations={recentDestinations}
           onSelectRecent={handleRecentSelect}
         />
         <DestinationSelectScreen
           searchQuery={searchQuery}
+          browseMode={browseMode}
           results={results}
           userLocation={userLocation ? { latitude: userLocation.latitude, longitude: userLocation.longitude } : null}
           onSelect={handleDestinationSelect}

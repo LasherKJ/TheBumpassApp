@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   View,
@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ScrollView,
 } from 'react-native';
+import * as Location from 'expo-location';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme';
@@ -14,6 +15,7 @@ import type { Destination } from '../types';
 
 interface DestinationSelectScreenProps {
   searchQuery: string;
+  browseMode: boolean;
   results: Destination[];
   userLocation: { latitude: number; longitude: number } | null;
   onSelect: (destination: Destination) => void;
@@ -43,12 +45,33 @@ function BobbingMarker() {
 
 export function DestinationSelectScreen({
   searchQuery,
+  browseMode,
   results,
   userLocation,
   onSelect,
   onBack,
 }: DestinationSelectScreenProps) {
+  const [pendingPin, setPendingPin] = useState<{ latitude: number; longitude: number } | null>(null);
+  const selectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mapPressIdRef = useRef(0);
+
+  useEffect(() => {
+    return () => {
+      if (selectTimeoutRef.current) {
+        clearTimeout(selectTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const region = useMemo(() => {
+    if (results.length === 0 && userLocation) {
+      return {
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+        latitudeDelta: 0.06,
+        longitudeDelta: 0.06,
+      };
+    }
     if (results.length === 0 && !userLocation) {
       return { latitude: 37.7749, longitude: -122.4194, latitudeDelta: 0.1, longitudeDelta: 0.1 };
     }
@@ -71,6 +94,55 @@ export function DestinationSelectScreen({
       longitudeDelta: lngDelta,
     };
   }, [results, userLocation]);
+
+  const handleMapPress = async (latitude: number, longitude: number) => {
+    if (!browseMode) {
+      return;
+    }
+
+    mapPressIdRef.current += 1;
+    const pressId = mapPressIdRef.current;
+
+    setPendingPin({ latitude, longitude });
+    if (selectTimeoutRef.current) {
+      clearTimeout(selectTimeoutRef.current);
+      selectTimeoutRef.current = null;
+    }
+
+    let label = 'Pinned Location';
+    let address = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+
+    try {
+      const geocode = await Location.reverseGeocodeAsync({ latitude, longitude });
+      if (geocode.length > 0) {
+        const first = geocode[0];
+        const parts = [first.name, first.street, first.city, first.region].filter(Boolean);
+        label = first.name || first.street || label;
+        address = parts.length > 0 ? parts.join(', ') : address;
+      }
+    } catch (e) {
+      console.warn('reverseGeocodeAsync failed:', e);
+    }
+
+    // Ignore stale async responses from older taps.
+    if (pressId !== mapPressIdRef.current) {
+      return;
+    }
+
+    const selectedDestination: Destination = {
+      id: `pin-${Date.now()}`,
+      label,
+      address,
+      latitude,
+      longitude,
+    };
+
+    // Briefly show the dropped pin before moving to the compass screen.
+    selectTimeoutRef.current = setTimeout(() => {
+      setPendingPin(null);
+      onSelect(selectedDestination);
+    }, 700);
+  };
 
   const renderItem = ({ item, index }: { item: Destination; index: number }) => (
     <TouchableOpacity
@@ -96,19 +168,22 @@ export function DestinationSelectScreen({
           <Text style={styles.backText}>▲ BACK</Text>
         </TouchableOpacity>
 
-        <Text style={styles.heading}>SELECT DESTINATION</Text>
-        <Text style={styles.query}>"{searchQuery}"</Text>
+        <Text style={styles.heading}>{browseMode ? 'BROWSE MAP' : 'SELECT DESTINATION'}</Text>
+        <Text style={styles.query}>
+          {browseMode ? 'TAP ANYWHERE TO SELECT A DESTINATION' : `"${searchQuery}"`}
+        </Text>
 
         <View style={styles.receiptDashes} />
 
-        {results.length > 0 && (
-          <View style={styles.mapContainer}>
+        {(browseMode || results.length > 0) && (
+          <View style={[styles.mapContainer, browseMode && styles.mapContainerBrowse]}>
             <MapView
               style={styles.map}
               provider={PROVIDER_GOOGLE}
               region={region}
               customMapStyle={mapStyle}
               showsUserLocation={true}
+              onPress={(event) => handleMapPress(event.nativeEvent.coordinate.latitude, event.nativeEvent.coordinate.longitude)}
             >
               {results.map((item, index) => (
                 <Marker
@@ -121,18 +196,26 @@ export function DestinationSelectScreen({
                   <BobbingMarker />
                 </Marker>
               ))}
+              {browseMode && pendingPin && (
+                <Marker
+                  coordinate={pendingPin}
+                  title="Selected"
+                >
+                  <BobbingMarker />
+                </Marker>
+              )}
             </MapView>
           </View>
         )}
 
-        {results.length === 0 ? (
+        {!browseMode && results.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>NO RESULTS FOUND</Text>
             <Text style={styles.emptySubtext}>
               TRY A DIFFERENT ADDRESS
             </Text>
           </View>
-        ) : (
+        ) : !browseMode ? (
           <ScrollView
             style={styles.list}
             showsVerticalScrollIndicator={false}
@@ -157,6 +240,10 @@ export function DestinationSelectScreen({
               </React.Fragment>
             ))}
           </ScrollView>
+        ) : (
+          <View style={styles.browseHelpContainer}>
+            <Text style={styles.browseHelpText}>DROP A PIN BY TAPPING THE MAP</Text>
+          </View>
         )}
 
         <View style={styles.scrollHint}>
@@ -274,6 +361,17 @@ const styles = StyleSheet.create({
     marginTop: 8,
     opacity: 0.6,
   },
+  browseHelpContainer: {
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  browseHelpText: {
+    fontFamily: theme.fonts.mono,
+    fontSize: 11,
+    color: theme.colors.textSecondary,
+    letterSpacing: 3,
+    textAlign: 'center',
+  },
   scrollHint: {
     alignItems: 'center',
     paddingBottom: 20,
@@ -292,6 +390,11 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.divider,
     marginTop: 8,
     marginBottom: 8,
+  },
+  mapContainerBrowse: {
+    height: 360,
+    marginTop: 12,
+    marginBottom: 12,
   },
   map: {
     flex: 1,

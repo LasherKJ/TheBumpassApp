@@ -12,13 +12,21 @@ import {
 import { theme } from '../theme';
 import type { Destination } from '../types';
 
+const inputScreenColors = {
+  line: '#C8C0B3',
+  secondaryText: '#DDD5C8',
+  buttonBorder: '#F2D8A0',
+  buttonText: '#FFF0CC',
+};
+
 interface DestinationInputScreenProps {
   onSubmit: (address: string) => void;
+  onBrowseMap: () => void;
   recentDestinations?: Destination[];
   onSelectRecent?: (destination: Destination) => void;
 }
 
-export function DestinationInputScreen({ onSubmit, recentDestinations = [], onSelectRecent }: DestinationInputScreenProps) {
+export function DestinationInputScreen({ onSubmit, onBrowseMap, recentDestinations = [], onSelectRecent }: DestinationInputScreenProps) {
   const [address, setAddress] = useState('');
 
   const handleGo = () => {
@@ -47,7 +55,7 @@ export function DestinationInputScreen({ onSubmit, recentDestinations = [], onSe
             value={address}
             onChangeText={setAddress}
             placeholder="123 Main St, City, State"
-            placeholderTextColor={theme.colors.textSecondary}
+            placeholderTextColor={inputScreenColors.secondaryText}
             returnKeyType="go"
             onSubmitEditing={handleGo}
             autoCorrect={false}
@@ -56,12 +64,20 @@ export function DestinationInputScreen({ onSubmit, recentDestinations = [], onSe
         </View>
 
         <TouchableOpacity
-          style={[styles.goButton, !address.trim() && styles.goButtonDisabled]}
+          style={styles.goButton}
           onPress={handleGo}
           disabled={!address.trim()}
           activeOpacity={0.7}
         >
           <Text style={styles.goButtonText}>▼ FIND IT ▼</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.browseButton}
+          onPress={onBrowseMap}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.browseButtonText}>BROWSE THE MAP</Text>
         </TouchableOpacity>
 
         {recentDestinations.length > 0 && (
@@ -108,14 +124,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 32,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'center',
+    paddingTop: 20,
   },
   receiptDashes: {
     width: '100%',
     borderTopWidth: 1,
     borderStyle: 'dashed',
-    borderColor: theme.colors.textSecondary,
+    borderColor: inputScreenColors.line,
     marginVertical: 8,
   },
   title: {
@@ -124,24 +141,24 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: theme.colors.primary,
     letterSpacing: 12,
-    marginTop: 16,
+    marginTop: 8,
   },
   subtitle: {
     fontFamily: theme.fonts.mono,
     fontSize: 12,
-    color: theme.colors.textSecondary,
+    color: inputScreenColors.secondaryText,
     letterSpacing: 4,
     marginTop: 8,
     marginBottom: 8,
   },
   inputSection: {
     width: '100%',
-    marginTop: 48,
+    marginTop: 32,
   },
   label: {
     fontFamily: theme.fonts.mono,
     fontSize: 11,
-    color: theme.colors.textSecondary,
+    color: inputScreenColors.secondaryText,
     letterSpacing: 3,
     marginBottom: 12,
   },
@@ -149,27 +166,38 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.mono,
     fontSize: 16,
     color: theme.colors.text,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.divider,
+    borderBottomWidth: 2,
+    borderBottomColor: inputScreenColors.line,
     paddingVertical: 12,
     width: '100%',
   },
   goButton: {
-    marginTop: 40,
-    borderWidth: 1,
-    borderColor: theme.colors.accent,
+    marginTop: 28,
+    width: '100%',
+    borderWidth: 3,
+    borderColor: inputScreenColors.buttonBorder,
     paddingVertical: 16,
-    paddingHorizontal: 48,
-  },
-  goButtonDisabled: {
-    borderColor: theme.colors.divider,
-    opacity: 0.4,
+    alignItems: 'center',
   },
   goButtonText: {
     fontFamily: theme.fonts.mono,
     fontSize: 14,
-    color: theme.colors.accent,
+    color: inputScreenColors.buttonText,
     letterSpacing: 4,
+  },
+  browseButton: {
+    marginTop: 12,
+    width: '100%',
+    borderWidth: 3,
+    borderColor: inputScreenColors.buttonBorder,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  browseButtonText: {
+    fontFamily: theme.fonts.mono,
+    fontSize: 12,
+    color: inputScreenColors.secondaryText,
+    letterSpacing: 3,
   },
   scrollHint: {
     position: 'absolute',
@@ -178,7 +206,7 @@ const styles = StyleSheet.create({
   scrollHintText: {
     fontFamily: theme.fonts.mono,
     fontSize: 24,
-    color: theme.colors.textSecondary,
+    color: inputScreenColors.secondaryText,
     opacity: 0.4,
   },
   recentSection: {
@@ -189,7 +217,7 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.mono,
     fontSize: 12,
     fontWeight: '700',
-    color: theme.colors.textSecondary,
+    color: inputScreenColors.secondaryText,
     letterSpacing: 4,
     marginBottom: 4,
   },
@@ -204,7 +232,7 @@ const styles = StyleSheet.create({
   recentIndex: {
     fontFamily: theme.fonts.mono,
     fontSize: 12,
-    color: theme.colors.textSecondary,
+    color: inputScreenColors.secondaryText,
     marginRight: 16,
   },
   recentContent: {
@@ -219,18 +247,18 @@ const styles = StyleSheet.create({
   recentAddress: {
     fontFamily: theme.fonts.mono,
     fontSize: 11,
-    color: theme.colors.textSecondary,
+    color: inputScreenColors.secondaryText,
     marginTop: 4,
   },
   recentArrow: {
     fontFamily: theme.fonts.mono,
     fontSize: 14,
-    color: theme.colors.accent,
+    color: inputScreenColors.buttonText,
     marginLeft: 12,
   },
   separator: {
     fontFamily: theme.fonts.mono,
-    color: theme.colors.textSecondary,
+    color: inputScreenColors.secondaryText,
     fontSize: 12,
     textAlign: 'center',
     letterSpacing: 2,
