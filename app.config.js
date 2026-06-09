@@ -15,7 +15,7 @@ export default {
         },
       ],
     ],
-    name: 'Bumpass App',
+    name: 'Bumpass',
     slug: 'bumpass-app',
     version: '1.0.1',
     orientation: 'portrait',
