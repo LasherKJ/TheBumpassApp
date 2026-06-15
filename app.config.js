@@ -17,7 +17,7 @@ export default {
     ],
     name: 'Bumpass',
     slug: 'bumpass-app',
-    version: '1.0.1',
+    version: '1.2.0',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
@@ -30,6 +30,9 @@ export default {
     ios: {
       bundleIdentifier: 'com.kevinlasher.bumpass.app',
       supportsTablet: true,
+      infoPlist: {
+        ITSAppUsesNonExemptEncryption: false,
+      },
       config: {
         googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
       },
