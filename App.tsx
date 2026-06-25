@@ -94,7 +94,6 @@ export default function App() {
   }, []);
 
   const handleDestinationSelect = useCallback((destination: Destination) => {
-    setBrowseMode(false);
     setSelectedFromRecent(false);
     setSelectedDestination(destination);
     addRecentDestination(destination).then(setRecentDestinations);

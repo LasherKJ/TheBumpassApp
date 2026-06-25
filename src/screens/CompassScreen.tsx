@@ -3,6 +3,7 @@ import {
   View,
   Text,
   TouchableOpacity,
+  Pressable,
   StyleSheet,
   Animated,
   Easing,
@@ -10,11 +11,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { useKeepAwake } from 'expo-keep-awake';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { theme } from '../theme';
 import { CalcDistanceMeters, CalcInitialBearingDegrees } from '../utilities/haversine';
 import type { Destination } from '../types';
 
 const METERS_TO_MILES = 0.000621371;
+const METERS_TO_KM = 0.001;
+const UNITS_STORAGE_KEY = 'distance_units';
 
 interface CompassScreenProps {
   destination: Destination | null;
@@ -26,6 +30,13 @@ export function CompassScreen({ destination, userLocation: initialLocation, onBa
   useKeepAwake();
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(initialLocation);
   const [heading, setHeading] = useState(0);
+  const [headingSource, setHeadingSource] = useState<'magnetic' | 'gps' | null>(null);
+  const [headingStatus, setHeadingStatus] = useState<'ok' | 'uncalibrated' | 'stuck' | null>(null);
+  const [showDebug, setShowDebug] = useState(false);
+  const [units, setUnits] = useState<'mi' | 'km'>('mi');
+  const lastHeadingValue = useRef<number | null>(null);
+  const lastHeadingChangeAt = useRef(Date.now());
+  const headingAccuracy = useRef<number | null>(null);
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const prevRotation = useRef(0);
 
@@ -36,6 +47,15 @@ export function CompassScreen({ destination, userLocation: initialLocation, onBa
     }
   }, [initialLocation]);
 
+  // Load the saved distance-unit preference
+  useEffect(() => {
+    (async () => {
+      const saved = await AsyncStorage.getItem(UNITS_STORAGE_KEY);
+      if (saved === 'mi' || saved === 'km') {
+        setUnits(saved);
+      }
+    })();
+  }, []);
   // Watch user position
   useEffect(() => {
     let sub: Location.LocationSubscription | null = null;
@@ -58,15 +78,56 @@ export function CompassScreen({ destination, userLocation: initialLocation, onBa
       try {
         sub = await Location.watchHeadingAsync((h) => {
           // trueHeading requires GPS fix; fall back to magnetometer heading
-          setHeading(h.trueHeading >= 0 ? h.trueHeading : h.magHeading);
+          const value = h.trueHeading >= 0 ? h.trueHeading : h.magHeading;
+          setHeading(value);
+          setHeadingSource('magnetic');
+
+          // expo accuracy: 0 none, 1 low, 2 medium, 3 high (lower = needs calibration)
+          headingAccuracy.current = h.accuracy ?? null;
+
+          // Track when the heading value actually changes (for stuck detection).
+          // Use shortest angular difference so the 0/360 wrap isn't counted as movement.
+          if (lastHeadingValue.current === null) {
+            lastHeadingChangeAt.current = Date.now();
+          } else {
+            let delta = Math.abs(value - lastHeadingValue.current);
+            if (delta > 180) delta = 360 - delta;
+            if (delta > 0.5) lastHeadingChangeAt.current = Date.now();
+          }
+          lastHeadingValue.current = value;
         });
         if (cancelled) sub.remove();
       } catch (e) {
         console.warn('watchHeadingAsync failed:', e);
+        // No magnetometer available; arrow only turns as GPS position changes
+        setHeadingSource('gps');
       }
     })();
     return () => { cancelled = true; sub?.remove(); };
   }, []);
+
+  // Periodically classify the magnetometer health for the debug message
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (headingSource === 'gps') return;
+      if (lastHeadingValue.current === null) {
+        setHeadingStatus(null);
+        return;
+      }
+      const acc = headingAccuracy.current;
+      const frozenMs = Date.now() - lastHeadingChangeAt.current;
+      if (acc !== null && acc >= 0 && acc < 2) {
+        // Low/no calibration reported by the sensor
+        setHeadingStatus('uncalibrated');
+      } else if (frozenMs > 5000) {
+        // Events arriving but the value hasn't moved -> sensor is stuck
+        setHeadingStatus('stuck');
+      } else {
+        setHeadingStatus('ok');
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [headingSource]);
 
   // Compute bearing and distance
   const distance = destination && userLocation
@@ -100,12 +161,35 @@ export function CompassScreen({ destination, userLocation: initialLocation, onBa
   });
 
   const distanceDisplay = distance !== null
-    ? `${(distance * METERS_TO_MILES).toFixed(1)} mi`
-    : '-- mi';
+    ? `${(distance * (units === 'mi' ? METERS_TO_MILES : METERS_TO_KM)).toFixed(1)} ${units}`
+    : `-- ${units}`;
 
   const bearingDisplay = bearing !== null
     ? `${Math.round(bearing)}°`
     : '--°';
+
+  // Long-press the arrow to toggle the heading-source debug message
+  const handleArrowLongPress = () => {
+    setShowDebug((prev) => !prev);
+  };
+
+  // Tap the distance to toggle units and persist the choice
+  const handleToggleUnits = () => {
+    setUnits((prev) => {
+      const next = prev === 'mi' ? 'km' : 'mi';
+      AsyncStorage.setItem(UNITS_STORAGE_KEY, next).catch(() => {});
+      return next;
+    });
+  };
+  const debugMessage = headingSource === 'gps'
+    ? 'SRC: GPS MOTION (NO COMPASS)'
+    : headingStatus === 'uncalibrated'
+    ? 'COMPASS UNCALIBRATED'
+    : headingStatus === 'stuck'
+    ? 'COMPASS STUCK / NOT UPDATING'
+    : headingStatus === 'ok'
+    ? 'SRC: MAGNETIC COMPASS (OK)'
+    : 'SRC: WAITING...';
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -133,17 +217,20 @@ export function CompassScreen({ destination, userLocation: initialLocation, onBa
         {/* Compass */}
         <View style={styles.compassContainer}>
           <View style={styles.compassRing}>
-            <Animated.Text style={[styles.compassArrow, { transform: [{ rotate: spin }] }]}>
-              ↑
-            </Animated.Text>
+            <Pressable onLongPress={handleArrowLongPress}>
+              <Animated.Text style={[styles.compassArrow, { transform: [{ rotate: spin }] }]}>
+                ↑
+              </Animated.Text>
+            </Pressable>
+          {showDebug && <Text style={styles.debugText}>{debugMessage}</Text>}
           </View>
         </View>
 
         {/* Distance display */}
-        <View style={styles.distanceSection}>
+        <TouchableOpacity onPress={handleToggleUnits} style={styles.distanceSection}>
           <Text style={styles.distanceValue}>{distanceDisplay}</Text>
           <Text style={styles.distanceLabel}>DISTANCE</Text>
-        </View>
+        </TouchableOpacity>
 
         <View style={styles.receiptDashes} />
         <Text style={styles.footer}>BUMPASS</Text>
@@ -225,6 +312,23 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.mono,
     fontSize: 180,
     color: theme.colors.accent,
+  },
+  debugText: {
+    fontFamily: theme.fonts.mono,
+    fontSize: 11,
+    color: theme.colors.textSecondary,
+    letterSpacing: 2,
+    marginTop: 12,
+    textAlign: 'center',
+    position: 'absolute',
+    bottom: -10,
+    borderWidth: 1,
+    borderColor: theme.colors.textSecondary,
+    borderStyle: 'dashed',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: theme.colors.background,
+    
   },
   distanceSection: {
     alignItems: 'center',
