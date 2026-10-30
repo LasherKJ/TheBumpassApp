@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { Alert } from 'react-native';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { Alert, useColorScheme as useSystemColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const THEME_STORAGE_KEY = 'color_scheme';
@@ -36,24 +36,30 @@ const themes = {
 } as const;
 
 export type ColorScheme = keyof typeof themes;
+export type ThemePreference = ColorScheme | 'auto';
 export type AppTheme = (typeof themes)[ColorScheme];
 
 interface ThemeContextValue {
   colorScheme: ColorScheme;
-  setColorScheme: (scheme: ColorScheme) => Promise<void>;
+  themePreference: ThemePreference;
+  setColorScheme: (scheme: ThemePreference) => Promise<void>;
   theme: AppTheme;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: React.PropsWithChildren) {
-  const [colorScheme, setColorSchemeState] = useState<ColorScheme>('dark');
+  const systemColorScheme = useSystemColorScheme();
+  const [themePreference, setThemePreference] = useState<ThemePreference>('dark');
+  const colorScheme = themePreference === 'auto'
+    ? (systemColorScheme === 'light' ? 'light' : 'dark')
+    : themePreference;
 
   useEffect(() => {
     AsyncStorage.getItem(THEME_STORAGE_KEY)
       .then((saved) => {
-        if (saved === 'dark' || saved === 'light') {
-          setColorSchemeState(saved);
+        if (saved === 'dark' || saved === 'light' || saved === 'auto') {
+          setThemePreference(saved);
         }
       })
       .catch(() => {
@@ -61,18 +67,23 @@ export function ThemeProvider({ children }: React.PropsWithChildren) {
       });
   }, []);
 
-  const setColorScheme = async (scheme: ColorScheme) => {
+  const setColorScheme = useCallback(async (scheme: ThemePreference) => {
     try {
       await AsyncStorage.setItem(THEME_STORAGE_KEY, scheme);
-      setColorSchemeState(scheme);
+      setThemePreference(scheme);
     } catch {
       Alert.alert('Theme not saved', 'Could not save your color theme preference.');
     }
-  };
+  }, []);
 
   const value = useMemo(
-    () => ({ colorScheme, setColorScheme, theme: themes[colorScheme] }),
-    [colorScheme],
+    () => ({
+      colorScheme,
+      themePreference,
+      setColorScheme,
+      theme: themes[colorScheme],
+    }),
+    [colorScheme, setColorScheme, themePreference],
   );
 
   return React.createElement(ThemeContext.Provider, { value }, children);

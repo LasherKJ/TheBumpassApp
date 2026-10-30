@@ -19,7 +19,7 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ visible, onClose }: SettingsModalProps) {
-  const { theme, colorScheme, setColorScheme } = useTheme();
+  const { theme, themePreference, setColorScheme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [units, setUnits] = useState<'mi' | 'km'>('mi');
   const [unitsLoaded, setUnitsLoaded] = useState(false);
@@ -63,8 +63,8 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
           <Text style={styles.title}>SETTINGS</Text>
           <Text style={styles.label}>COLOR THEME</Text>
           <View style={styles.unitsToggle}>
-            {(['dark', 'light'] as const).map((scheme) => {
-              const selected = colorScheme === scheme;
+            {(['dark', 'light', 'auto'] as const).map((scheme) => {
+              const selected = themePreference === scheme;
               return (
                 <TouchableOpacity
                   key={scheme}
