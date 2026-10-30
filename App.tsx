@@ -8,7 +8,7 @@ import { VerticalPager, VerticalPagerRef } from './src/components/VerticalPager'
 import { DestinationInputScreen } from './src/screens/DestinationInputScreen';
 import { DestinationSelectScreen } from './src/screens/DestinationSelectScreen';
 import { CompassScreen } from './src/screens/CompassScreen';
-import { theme } from './src/theme';
+import { ThemeProvider, useTheme } from './src/theme';
 import type { Destination } from './src/types';
 import { getRecentDestinations, addRecentDestination } from './src/utilities/recentDestinations';
 
@@ -49,6 +49,15 @@ async function searchPlaces(
 }
 
 export default function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
+  );
+}
+
+function AppContent() {
+  const { theme, colorScheme } = useTheme();
   const pagerRef = useRef<VerticalPagerRef>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [browseMode, setBrowseMode] = useState(false);
@@ -117,8 +126,8 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-    <View style={styles.container}>
-      <StatusBar style="light" />
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       <VerticalPager ref={pagerRef}>
         <DestinationInputScreen
           onSubmit={handleAddressSubmit}
@@ -148,7 +157,6 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
     paddingTop: Constants.statusBarHeight,
   },
 });

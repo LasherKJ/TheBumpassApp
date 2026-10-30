@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { useKeepAwake } from 'expo-keep-awake';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { theme } from '../theme';
+import { FontAwesomeFreeSolid } from '@react-native-vector-icons/fontawesome-free-solid';
+import { useTheme } from '../theme';
 import { CalcDistanceMeters, CalcInitialBearingDegrees } from '../utilities/haversine';
 import type { Destination } from '../types';
 
@@ -28,6 +29,8 @@ interface CompassScreenProps {
 
 export function CompassScreen({ destination, userLocation: initialLocation, onBack }: CompassScreenProps) {
   useKeepAwake();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(initialLocation);
   const [heading, setHeading] = useState(0);
   const [headingSource, setHeadingSource] = useState<'magnetic' | 'gps' | null>(null);
@@ -218,9 +221,9 @@ export function CompassScreen({ destination, userLocation: initialLocation, onBa
         <View style={styles.compassContainer}>
           <View style={styles.compassRing}>
             <Pressable onLongPress={handleArrowLongPress}>
-              <Animated.Text style={[styles.compassArrow, { transform: [{ rotate: spin }] }]}>
-                ↑
-              </Animated.Text>
+              <Animated.View style={{ transform: [{ rotate: spin }] }}>
+                <FontAwesomeFreeSolid name="location-arrow" size={140} color={theme.colors.accent} />
+              </Animated.View>
             </Pressable>
           {showDebug && <Text style={styles.debugText}>{debugMessage}</Text>}
           </View>
@@ -239,7 +242,8 @@ export function CompassScreen({ destination, userLocation: initialLocation, onBa
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(theme: ReturnType<typeof useTheme>['theme']) {
+  return StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: theme.colors.background,
@@ -288,7 +292,8 @@ const styles = StyleSheet.create({
   },
   bearingText: {
     fontFamily: theme.fonts.mono,
-    fontSize: 13,
+    fontSize: 16,
+    fontWeight: '900',
     color: theme.colors.accent,
     letterSpacing: 4,
     textAlign: 'center',
@@ -303,15 +308,10 @@ const styles = StyleSheet.create({
     width: 280,
     height: 280,
     borderRadius: 140,
-    borderWidth: 1,
+    borderWidth: 4,
     borderColor: theme.colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  compassArrow: {
-    fontFamily: theme.fonts.mono,
-    fontSize: 180,
-    color: theme.colors.accent,
   },
   debugText: {
     fontFamily: theme.fonts.mono,
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     position: 'absolute',
     bottom: -10,
-    borderWidth: 1,
+    borderWidth: 4,
     borderColor: theme.colors.textSecondary,
     borderStyle: 'dashed',
     paddingHorizontal: 8,
@@ -356,4 +356,5 @@ const styles = StyleSheet.create({
     opacity: 0.4,
     marginTop: 8,
   },
-});
+  });
+}

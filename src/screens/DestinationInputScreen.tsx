@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -9,16 +9,9 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { theme } from '../theme';
+import { useTheme } from '../theme';
 import type { Destination } from '../types';
 import { SettingsModal } from '../components/SettingsModal';
-
-const inputScreenColors = {
-  line: '#C8C0B3',
-  secondaryText: '#DDD5C8',
-  buttonBorder: '#F2D8A0',
-  buttonText: '#FFF0CC',
-};
 
 interface DestinationInputScreenProps {
   onSubmit: (address: string) => void;
@@ -28,6 +21,14 @@ interface DestinationInputScreenProps {
 }
 
 export function DestinationInputScreen({ onSubmit, onBrowseMap, recentDestinations = [], onSelectRecent }: DestinationInputScreenProps) {
+  const { theme, colorScheme } = useTheme();
+  const inputScreenColors = {
+    line: theme.colors.divider,
+    secondaryText: theme.colors.textSecondary,
+    buttonBorder: theme.colors.accent,
+    buttonText: theme.colors.primary,
+  };
+  const styles = useMemo(() => createStyles(theme, inputScreenColors), [theme]);
   const [address, setAddress] = useState('');
   const [settingsVisible, setSettingsVisible] = useState(false);
 
@@ -72,7 +73,7 @@ export function DestinationInputScreen({ onSubmit, onBrowseMap, recentDestinatio
             returnKeyType="go"
             onSubmitEditing={handleGo}
             autoCorrect={false}
-            keyboardAppearance="dark"
+            keyboardAppearance={colorScheme}
           />
         </View>
 
@@ -134,7 +135,11 @@ export function DestinationInputScreen({ onSubmit, onBrowseMap, recentDestinatio
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(
+  theme: ReturnType<typeof useTheme>['theme'],
+  inputScreenColors: { line: string; secondaryText: string; buttonBorder: string; buttonText: string },
+) {
+  return StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: theme.colors.background,
@@ -297,4 +302,5 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     opacity: 0.4,
   },
-});
+  });
+}
