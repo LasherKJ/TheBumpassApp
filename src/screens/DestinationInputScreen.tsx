@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { theme } from '../theme';
 import type { Destination } from '../types';
+import { SettingsModal } from '../components/SettingsModal';
 
 const inputScreenColors = {
   line: '#C8C0B3',
@@ -28,6 +29,7 @@ interface DestinationInputScreenProps {
 
 export function DestinationInputScreen({ onSubmit, onBrowseMap, recentDestinations = [], onSelectRecent }: DestinationInputScreenProps) {
   const [address, setAddress] = useState('');
+  const [settingsVisible, setSettingsVisible] = useState(false);
 
   const handleGo = () => {
     const trimmed = address.trim();
@@ -49,7 +51,18 @@ export function DestinationInputScreen({ onSubmit, onBrowseMap, recentDestinatio
         <View style={styles.receiptDashes} />
 
         <View style={styles.inputSection}>
-          <Text style={styles.label}>ENTER DESTINATION</Text>
+          <View style={styles.labelRow}>
+            <Text style={styles.label}>ENTER DESTINATION</Text>
+            <TouchableOpacity
+              style={styles.settingsButton}
+              onPress={() => setSettingsVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Open settings"
+              activeOpacity={0.7}
+            >
+              <Text style={styles.settingsIcon}>⚙︎</Text>
+            </TouchableOpacity>
+          </View>
           <TextInput
             style={styles.input}
             value={address}
@@ -62,6 +75,11 @@ export function DestinationInputScreen({ onSubmit, onBrowseMap, recentDestinatio
             keyboardAppearance="dark"
           />
         </View>
+
+        <SettingsModal
+          visible={settingsVisible}
+          onClose={() => setSettingsVisible(false)}
+        />
 
         <TouchableOpacity
           style={styles.goButton}
@@ -160,7 +178,22 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: inputScreenColors.secondaryText,
     letterSpacing: 3,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 12,
+  },
+  settingsButton: {
+    marginLeft: 'auto',
+    width: 32,
+    height: 32,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  settingsIcon: {
+    fontSize: 28,
+    color: inputScreenColors.buttonBorder,
   },
   input: {
     fontFamily: theme.fonts.mono,

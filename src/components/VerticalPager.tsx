@@ -6,6 +6,7 @@ import {
   View,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  ScrollViewInstance,
 } from 'react-native';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -22,7 +23,7 @@ interface VerticalPagerProps {
 
 export const VerticalPager = forwardRef<VerticalPagerRef, VerticalPagerProps>(
   ({ children, onPageChanged, scrollEnabled = false }, ref) => {
-    const scrollViewRef = useRef<ScrollView>(null);
+    const scrollViewRef = useRef<ScrollViewInstance>(null);
     const currentPage = useRef(0);
 
     const scrollToPage = useCallback((index: number) => {
