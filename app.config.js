@@ -14,13 +14,20 @@ export default {
             'Bumpass uses your location to show direction and distance to your destination.',
         },
       ],
+      [
+        'react-native-maps',
+        {
+          iosGoogleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
+          androidGoogleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
+        },
+      ],
     ],
     name: 'Bumpass',
     slug: 'bumpass-app',
     version: '1.2.1',
     orientation: 'portrait',
     icon: './assets/icon.png',
-    userInterfaceStyle: 'light',
+    userInterfaceStyle: 'automatic',
     newArchEnabled: true,
     splash: {
       image: './assets/icon.png',

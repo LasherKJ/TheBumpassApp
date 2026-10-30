@@ -10,7 +10,7 @@ import {
 import * as Location from 'expo-location';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { theme } from '../theme';
+import { useTheme } from '../theme';
 import type { Destination } from '../types';
 
 interface DestinationSelectScreenProps {
@@ -23,6 +23,8 @@ interface DestinationSelectScreenProps {
 }
 
 function BobbingMarker() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const translateY = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -51,6 +53,8 @@ export function DestinationSelectScreen({
   onSelect,
   onBack,
 }: DestinationSelectScreenProps) {
+  const { theme, colorScheme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [pendingPin, setPendingPin] = useState<{ latitude: number; longitude: number } | null>(null);
   const selectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mapPressIdRef = useRef(0);
@@ -181,7 +185,7 @@ export function DestinationSelectScreen({
               style={styles.map}
               provider={PROVIDER_GOOGLE}
               region={region}
-              customMapStyle={mapStyle}
+              customMapStyle={colorScheme === 'dark' ? darkMapStyle : []}
               showsUserLocation={true}
               onPress={(event) => handleMapPress(event.nativeEvent.coordinate.latitude, event.nativeEvent.coordinate.longitude)}
             >
@@ -254,7 +258,8 @@ export function DestinationSelectScreen({
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(theme: ReturnType<typeof useTheme>['theme']) {
+  return StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: theme.colors.background,
@@ -405,9 +410,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     height: 64,
   },
-});
+  });
+}
 
-const mapStyle = [
+const darkMapStyle = [
   { elementType: 'geometry', stylers: [{ color: '#1A1A1A' }] },
   { elementType: 'labels.text.stroke', stylers: [{ color: '#0D0D0D' }] },
   { elementType: 'labels.text.fill', stylers: [{ color: '#8A8278' }] },

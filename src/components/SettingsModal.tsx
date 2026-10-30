@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Modal,
@@ -9,15 +9,9 @@ import {
   View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { theme } from '../theme';
+import { useTheme } from '../theme';
 
 const UNITS_STORAGE_KEY = 'distance_units';
-
-const settingsColors = {
-  secondaryText: '#DDD5C8',
-  buttonBorder: '#F2D8A0',
-  buttonText: '#FFF0CC',
-};
 
 interface SettingsModalProps {
   visible: boolean;
@@ -25,6 +19,8 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ visible, onClose }: SettingsModalProps) {
+  const { theme, themePreference, setColorScheme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [units, setUnits] = useState<'mi' | 'km'>('mi');
   const [unitsLoaded, setUnitsLoaded] = useState(false);
 
@@ -65,7 +61,27 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
         />
         <View style={styles.panel}>
           <Text style={styles.title}>SETTINGS</Text>
-          <Text style={styles.label}>DISTANCE UNITS</Text>
+          <Text style={styles.label}>COLOR THEME</Text>
+          <View style={styles.unitsToggle}>
+            {(['dark', 'light', 'auto'] as const).map((scheme) => {
+              const selected = themePreference === scheme;
+              return (
+                <TouchableOpacity
+                  key={scheme}
+                  style={[styles.unitOption, selected && styles.unitOptionSelected]}
+                  onPress={() => setColorScheme(scheme)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: selected }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.unitOptionText, selected && styles.unitOptionTextSelected]}>
+                    {scheme.toUpperCase()}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <Text style={[styles.label, styles.sectionLabel]}>DISTANCE UNITS</Text>
           <View style={styles.unitsToggle}>
             {(['mi', 'km'] as const).map((unit) => {
               const selected = units === unit;
@@ -99,10 +115,11 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(theme: ReturnType<typeof useTheme>['theme']) {
+  return StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,
@@ -111,7 +128,7 @@ const styles = StyleSheet.create({
     width: '100%',
     padding: 20,
     borderWidth: 1,
-    borderColor: settingsColors.buttonBorder,
+    borderColor: theme.colors.accent,
     backgroundColor: theme.colors.background,
   },
   title: {
@@ -125,14 +142,17 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: theme.fonts.mono,
     fontSize: 11,
-    color: settingsColors.secondaryText,
+    color: theme.colors.textSecondary,
     letterSpacing: 3,
     marginBottom: 12,
+  },
+  sectionLabel: {
+    marginTop: 20,
   },
   unitsToggle: {
     flexDirection: 'row',
     borderWidth: 2,
-    borderColor: settingsColors.buttonBorder,
+    borderColor: theme.colors.accent,
   },
   unitOption: {
     flex: 1,
@@ -141,12 +161,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   unitOptionSelected: {
-    backgroundColor: settingsColors.buttonBorder,
+    backgroundColor: theme.colors.accent,
   },
   unitOptionText: {
     fontFamily: theme.fonts.mono,
     fontSize: 11,
-    color: settingsColors.secondaryText,
+    color: theme.colors.textSecondary,
     letterSpacing: 1,
   },
   unitOptionTextSelected: {
@@ -162,7 +182,8 @@ const styles = StyleSheet.create({
   doneText: {
     fontFamily: theme.fonts.mono,
     fontSize: 11,
-    color: settingsColors.buttonText,
+    color: theme.colors.accent,
     letterSpacing: 3,
   },
-});
+  });
+}
